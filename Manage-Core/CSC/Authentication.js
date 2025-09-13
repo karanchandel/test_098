@@ -7,25 +7,40 @@ const CsCenter = require("../multiSchema/multischema");
 router.post("/register", async (req, res) => {
   try {
     const {
-      firstName, lastName, phone, email, username, password, Aadhar, PAN, CenterName, location,
-      accountNumber, bankName, IFSC
+      firstName,
+      phone,
+      email,
+      password,
+      Aadhar,
+      PAN,
+      CenterName,
+      location,
+      accountNumber,
+      bankName,
+      IFSC,
     } = req.body;
 
-    if (!firstName || !phone || !username || !password) {
+    // ✅ Required field check
+    if (!firstName || !phone || !password) {
       return res.status(400).json({ error: "Required fields missing" });
     }
 
-    const existingUser = await CsCenter.findOne({ username });
-    if (existingUser) {
-      return res.status(400).json({ error: "Username already exists" });
+    // ✅ Auto-generate username (firstName + random digits)
+    const baseName = firstName.toLowerCase().replace(/\s+/g, "");
+    let username = `${baseName}${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Ensure username is unique
+    while (await CsCenter.findOne({ username })) {
+      username = `${baseName}${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
+    // ✅ Hash password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
+    // ✅ Prepare payload (no lastName now)
     const payload = {
       firstName,
-      lastName,
       username,
       phone,
       email,
@@ -41,6 +56,7 @@ router.post("/register", async (req, res) => {
       password: hashedPassword,
     };
 
+    // ✅ Save user
     const user = new CsCenter(payload);
     await user.save();
 
