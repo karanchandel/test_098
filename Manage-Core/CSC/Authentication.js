@@ -73,17 +73,22 @@ router.post("/register", async (req, res) => {
 // Login route
 router.post("/login", async (req, res) => {
   try {
-    const { phone, username, password } = req.body;
+    const { email, username, password } = req.body;
 
-    if (!phone || !username || !password) {
-      return res.status(400).json({ error: "Phone, username, and password are required" });
+    if ((!email && !username) || !password) {
+      return res.status(400).json({ error: "Email or username and password are required" });
     }
 
-    const user = await CsCenter.findOne({ phone, username });
+    // ✅ Find user by email OR username
+    const user = await CsCenter.findOne({
+      $or: [{ email }, { username }],
+    });
+
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    // ✅ Validate password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid credentials" });
