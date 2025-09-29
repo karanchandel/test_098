@@ -94,14 +94,12 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-  return res.status(200).json({
-  message: "Login successful",
-  role: "CSC",
-  user: {
-    username: user.username,
-    email: user.email,
-  },
+ return res.json({
+  role: "csc",
+  message: "CSC partner logged in",
+  username: user.username
 });
+
 
   } catch (err) {
     console.error("Login error:", err.message);
