@@ -25,6 +25,16 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Required fields missing" });
     }
 
+    // ✅ Check for existing phone or email
+    const existingUser = await CsCenter.findOne({
+      $or: [{ phone }, { email }],
+    });
+    if (existingUser) {
+      return res.status(409).json({
+        error: "Phone or email already registered",
+      });
+    }
+
     // ✅ Auto-generate username (firstName + random digits)
     const baseName = firstName.toLowerCase().replace(/\s+/g, "");
     let username = `${baseName}${Math.floor(1000 + Math.random() * 9000)}`;
@@ -70,19 +80,17 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Login route
+// login route
 router.post("/login", async (req, res) => {
   try {
-    const { email, username, password } = req.body;
+    const { email, password } = req.body;
 
-    if ((!email && !username) || !password) {
-      return res.status(400).json({ error: "Email or username and password are required" });
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // ✅ Find user by email OR username
-    const user = await CsCenter.findOne({
-      $or: [{ email }, { username }],
-    });
+    // ✅ Find user by email only
+    const user = await CsCenter.findOne({ email });
 
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -94,12 +102,11 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
- return res.json({
-  role: "csc",
-  message: "CSC partner logged in",
-  username: user.username
-});
-
+    return res.json({
+      role: "csc",
+      message: "CSC partner logged in",
+      username: user.username,
+    });
 
   } catch (err) {
     console.error("Login error:", err.message);
@@ -107,19 +114,30 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// GET user details by phone number
-router.get("/detail/user-phone/:phone", async (req, res) => {
+
+
+// GET user details by phone or username
+router.get("/detail/user/:identifier", async (req, res) => {
   try {
-    const phone = req.params.phone;
-    const user = await CsCenter.findOne({ phone }).select("-password");
+    const identifier = req.params.identifier;
+
+    // Check if identifier is a phone number (all digits)
+    const isPhone = /^\d{10}$/.test(identifier);
+
+    const query = isPhone ? { phone: identifier } : { username: identifier };
+
+    const user = await CsCenter.findOne(query).select("-password");
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+
     return res.status(200).json({ user });
   } catch (err) {
     console.error("Fetch error:", err.message);
     return res.status(500).json({ error: "Server error" });
   }
 });
+
 
 module.exports = router;
