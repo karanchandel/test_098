@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require("bcrypt");
 const CsCenter = require("../multiSchema/multischema");
 
-// Registration route
+// 🔐 Register
 router.post("/register", async (req, res) => {
   try {
     const {
@@ -20,35 +20,25 @@ router.post("/register", async (req, res) => {
       IFSC,
     } = req.body;
 
-    // ✅ Required field check
     if (!firstName || !phone || !password) {
       return res.status(400).json({ error: "Required fields missing" });
     }
 
-    // ✅ Check for existing phone or email
     const existingUser = await CsCenter.findOne({
       $or: [{ phone }, { email }],
     });
     if (existingUser) {
-      return res.status(409).json({
-        error: "Phone or email already registered",
-      });
+      return res.status(409).json({ error: "Phone or email already registered" });
     }
 
-    // ✅ Auto-generate username (firstName + random digits)
     const baseName = firstName.toLowerCase().replace(/\s+/g, "");
     let username = `${baseName}${Math.floor(1000 + Math.random() * 9000)}`;
-
-    // Ensure username is unique
     while (await CsCenter.findOne({ username })) {
       username = `${baseName}${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
-    // ✅ Hash password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Prepare payload (no lastName now)
     const payload = {
       firstName,
       username,
@@ -58,15 +48,12 @@ router.post("/register", async (req, res) => {
       PAN,
       CenterName,
       location,
-      bankDetails: {
-        accountNumber,
-        bankName,
-        IFSC,
-      },
+      accountNumber,
+      bankName,
+      IFSC,
       password: hashedPassword,
     };
 
-    // ✅ Save user
     const user = new CsCenter(payload);
     await user.save();
 
@@ -80,23 +67,19 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// login route
+// 🔐 Login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // ✅ Find user by email only
     const user = await CsCenter.findOne({ email });
-
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // ✅ Validate password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -107,27 +90,20 @@ router.post("/login", async (req, res) => {
       message: "CSC partner logged in",
       username: user.username,
     });
-
   } catch (err) {
     console.error("Login error:", err.message);
     return res.status(500).json({ error: "Server error" });
   }
 });
 
-
-
-// GET user details by phone or username
+// 🔍 Get user by phone or username
 router.get("/detail/user/:identifier", async (req, res) => {
   try {
     const identifier = req.params.identifier;
-
-    // Check if identifier is a phone number (all digits)
     const isPhone = /^\d{10}$/.test(identifier);
-
     const query = isPhone ? { phone: identifier } : { username: identifier };
 
     const user = await CsCenter.findOne(query).select("-password");
-
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -139,5 +115,34 @@ router.get("/detail/user/:identifier", async (req, res) => {
   }
 });
 
+// ✏️ Update user (excluding username & phone)
+router.put("/update/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const updates = { ...req.body };
+
+    delete updates.username;
+    delete updates.phone;
+    delete updates.password;
+
+    const user = await CsCenter.findOneAndUpdate(
+      { username },
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "User updated successfully",
+      user,
+    });
+  } catch (err) {
+    console.error("Update error:", err.message);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
 
 module.exports = router;
