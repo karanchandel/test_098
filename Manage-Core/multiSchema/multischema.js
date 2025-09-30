@@ -11,11 +11,9 @@ const UserSchema = new mongoose.Schema({
   PAN: { type: String },
   CenterName: { type: String },
   location: { type: String },
-  bankDetails: {
-    accountNumber: { type: String },
-    bankName: { type: String },
-    IFSC: { type: String },
-  },
+  accountNumber: { type: String },  
+  bankName: { type: String },       
+  IFSC: { type: String }            
 });
 
 module.exports = mongoose.model("CsCenter", UserSchema);
