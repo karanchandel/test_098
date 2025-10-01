@@ -23,6 +23,17 @@ app.use("/api", myRoutes);
 
 const Data = require("./Manage-Core/Data/demo");
 app.use("/api/demo", Data);
+const HomeLoan = require("./Manage-Core/HomeLoan/Homeloan.js");
+app.use("/api/homeloan", HomeLoan);
+
+// const PersonalLoan = require("./Manage-Core/PersonalLoan");
+// app.use("/api/personalloan", PersonalLoan);
+
+// const BusinessLoan = require("./Manage-Core/BusinessLoan");
+// app.use("/api/businessloan", BusinessLoan);
+
+ const GoldLoan = require("./Manage-Core/GoldLoan/GoldLoan.js");
+ app.use("/api/goldloan", GoldLoan);
 
 app.get("/", (req, res) => {
   res.send("Hello server is Alive ");
