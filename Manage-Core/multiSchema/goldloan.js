@@ -15,6 +15,6 @@ const goldLoanSchema = new mongoose.Schema({
   monthlyIncome: String,
   existingEMI: String,
   agree: Boolean,
-});
+}, { strict: false });
 
 module.exports = mongoose.model("GoldLoan", goldLoanSchema);
